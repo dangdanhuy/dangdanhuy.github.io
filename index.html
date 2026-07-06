@@ -373,6 +373,57 @@
 
     .about-photo { height: 360px; }
 
+    .profile-panel {
+      min-height: 360px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--navy3);
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 22px;
+    }
+
+    .profile-kicker {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--blue2);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .profile-name {
+      font-family: var(--font-display);
+      font-size: 34px;
+      font-weight: 700;
+      line-height: 1.05;
+    }
+
+    .profile-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .profile-list div {
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+    }
+
+    .profile-list dt {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--blue2);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .profile-list dd {
+      color: var(--slate);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
     .about-text p {
       color: var(--slate);
       line-height: 1.75;
@@ -738,7 +789,7 @@
         <li><a href="#about">About</a></li>
         <li><a href="#education">Education</a></li>
         <li><a href="#experience">Experience</a></li>
-        <li><a href="#projects">Projects</a></li>
+        <li><a href="#projects">Work</a></li>
         <li><a href="#skills">Skills</a></li>
       </ul>
       <button class="theme-toggle" type="button" aria-label="Switch to light mode" aria-pressed="false">☾</button>
@@ -747,31 +798,31 @@
 
   <!-- ─── HERO ─────────────────────────────────────── -->
   <section id="hero">
-    <p class="hero-eyebrow">// Computer Science @ UC Berkeley</p>
+    <p class="hero-eyebrow">// Computer Science @ UC Irvine</p>
     <h1 class="hero-name">
       Dan Huy<br><span class="accent">Dang</span><span class="cursor"></span>
     </h1>
     <p class="hero-tagline">
       I build software that bridges <strong>AI and engineering workflows</strong>—from
-      retrieval-augmented systems to CAD automation. Currently transferring to Berkeley
-      with a 4.0 and looking for what's next.
+      retrieval-augmented systems to CAD automation. Currently pursuing a B.S. in
+      Computer Science at UC Irvine after earning a 3.94 GPA at Orange Coast College.
     </p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="#projects">View Projects</a>
+      <a class="btn btn-primary" href="#projects">View Work</a>
       <a class="btn btn-ghost" href="mailto:huydang18032005@gmail.com">Get in Touch</a>
     </div>
     <div class="hero-stats">
       <div>
-        <div class="stat-val"><em>4.0</em></div>
-        <div class="stat-label">GPA at Berkeley</div>
+        <div class="stat-val">May <em>2028</em></div>
+        <div class="stat-label">Expected B.S. Graduation</div>
       </div>
       <div>
-        <div class="stat-val">2<em>+</em></div>
-        <div class="stat-label">Years of Experience</div>
+        <div class="stat-val"><em>3.94</em></div>
+        <div class="stat-label">OCC GPA</div>
       </div>
       <div>
-        <div class="stat-val">3<em>+</em></div>
-        <div class="stat-label">Internships &amp; Roles</div>
+        <div class="stat-val"><em>6</em></div>
+        <div class="stat-label">Resume Roles</div>
       </div>
       <div>
         <div class="stat-val">RAG<em> &amp; </em>CAD</div>
@@ -787,30 +838,42 @@
         <p class="section-label">About me</p>
         <h2 class="section-title">Turning complex<br>systems into <span class="accent">clarity</span></h2>
         <p>
-          I'm a CS student at <strong>UC Berkeley</strong> with a background in full-stack development,
-          infrastructure engineering, and AI systems. My work lives at the intersection of
-          software and the physical world—whether that's integrating LLMs with CAD tools or
-          helping engineers retrieve knowledge faster.
+          I'm a CS student at <strong>UC Irvine</strong> with a background in software engineering,
+          IT support, and AI systems. My work lives at the intersection of software and the
+          physical world—whether that's integrating LLMs with CAD tools or helping engineers
+          retrieve knowledge faster.
         </p>
         <p>
-          Outside of engineering, I teach. As a <strong>Supplemental Instruction Leader</strong> and
-          embedded tutor at OCC, I've helped hundreds of students work through calculus,
-          linear algebra, and data structures. Good systems and good teaching share the same
-          core skill: making the hard stuff legible.
+          Outside of engineering, I teach. As a <strong>Supplemental Instruction Leader</strong>,
+          in-class assistant, embedded tutor, and mathematics tutor at OCC, I've helped
+          students work through calculus, linear algebra, differential equations, C++,
+          and data structures.
         </p>
         <ul class="contact-list">
           <li><span class="icon-sm">📍</span> Westminster, CA</li>
           <li><span class="icon-sm">📧</span> <a href="mailto:huydang18032005@gmail.com">huydang18032005@gmail.com</a></li>
           <li><span class="icon-sm">📞</span> (714) 766-4116</li>
-          <li><span class="icon-sm">🔗</span> <a href="https://github.com" target="_blank">github.com/danhuydang</a></li>
+          <li><span class="icon-sm">🔗</span> <a href="https://github.com/dangdanhuy" target="_blank">github.com/dangdanhuy</a></li>
         </ul>
       </div>
       <div class="reveal">
-        <!-- Replace src with your photo path or URL -->
-        <div class="media-placeholder about-photo">
-          <span class="icon">🖼</span>
-          <span>Add your photo here</span>
-          <span style="font-size:11px; opacity:0.4;">Recommended: 600 × 720px</span>
+        <div class="profile-panel">
+          <p class="profile-kicker">Resume Snapshot</p>
+          <div class="profile-name">Dan Huy Dang</div>
+          <dl class="profile-list">
+            <div>
+              <dt>Education</dt>
+              <dd>UC Irvine B.S. in Computer Science, expected May 2028.</dd>
+            </div>
+            <div>
+              <dt>Recent Work</dt>
+              <dd>Software engineering and IT internships with Acorn Engineering.</dd>
+            </div>
+            <div>
+              <dt>Teaching</dt>
+              <dd>OCC SI, in-class assistance, embedded tutoring, and mathematics tutoring.</dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>
@@ -824,9 +887,9 @@
 
       <div class="card reveal">
         <p class="card-eyebrow">2026 → 2028</p>
-        <h3 class="card-title">University of California, Berkeley</h3>
-        <p class="card-sub">B.A. in Computer Science · Berkeley, CA</p>
-        <span class="badge">GPA 4.00 / 4.00</span>
+        <h3 class="card-title">University of California, Irvine</h3>
+        <p class="card-sub">B.S. in Computer Science · Irvine, CA</p>
+        <span class="badge">Expected May 2028</span>
       </div>
 
       <div class="card reveal">
@@ -840,9 +903,9 @@
           <li>Distributed Systems</li>
           <li>Database Systems</li>
           <li>Machine Learning</li>
-          <li>Information Retrieval</li>
-          <li>Discrete Structures</li>
-          <li>Statistics I</li>
+          <li>Information Storage and Retrieval</li>
+          <li>Principles of Statistics I</li>
+          <li>Discrete Structures for Computing</li>
         </ul>
       </div>
 
@@ -859,10 +922,10 @@
         <div class="timeline-date">Aug 2025 –<br>Dec 2025</div>
         <div class="timeline-body">
           <p class="timeline-role">Software Engineer Intern</p>
-          <p class="timeline-company">Morris Group International · Acorn Engineering, City of Industry CA</p>
+          <p class="timeline-company">Morris Group International, Inc. · Acorn Engineering, City of Industry, CA</p>
           <ul class="timeline-bullets">
-            <li>Built internal software for engineering drawing workflows using C++, SolidWorks, and eDrawings APIs.</li>
-            <li>Designed a retrieval-augmented generation (RAG) system with Transformers, Sentence Transformers, LangChain chunking, and llama.cpp for local LLM inference over engineering knowledge bases.</li>
+            <li>Developed internally used software to work with engineering drawings using Visual Studio, C++, SolidWorks, and eDrawings APIs.</li>
+            <li>Built a retrieval-augmented generation system using Transformers, Sentence Transformers, LangChain-based chunking, and llama.cpp for local LLM inference and engineering knowledge retrieval.</li>
           </ul>
         </div>
       </div>
@@ -873,44 +936,55 @@
           <p class="timeline-role">IT Technician Intern</p>
           <p class="timeline-company">Acorn Engineering · City of Industry, CA</p>
           <ul class="timeline-bullets">
-            <li>Resolved hardware, network, Windows, SAP, SolidWorks, and VPN issues across the org.</li>
-            <li>Managed users/groups, GPOs, and file/print services on Windows Server 2016/2019 &amp; Active Directory.</li>
-            <li>Configured TCP/IP, DNS, DHCP, site-to-site VPN, and switch/router CLI changes.</li>
+            <li>Resolved hardware, network, Windows, SAP, SolidWorks, and VPN errors.</li>
+            <li>Provisioned users/groups, maintained GPOs, and managed file/print services on Windows Server 2016/2019 &amp; Active Directory.</li>
+            <li>Configured TCP/IP, DNS, DHCP, site-to-site VPN, and basic switch/router CLI changes.</li>
           </ul>
         </div>
       </div>
 
       <div class="timeline-item reveal">
-        <div class="timeline-date">Jan 2026 –<br>Present</div>
+        <div class="timeline-date">Jan 2026 –<br>Jun 2026</div>
         <div class="timeline-body">
           <p class="timeline-role">Supplemental Instruction Leader – Mathematics</p>
           <p class="timeline-company">Orange Coast College · Costa Mesa, CA</p>
           <ul class="timeline-bullets">
-            <li>Attend Calculus I as a model student; plan and lead SI sessions for enrolled students.</li>
-            <li>Coordinate with faculty and SI Supervisor, submitting lesson plans, attendance, and timecards.</li>
+            <li>Attend Calculus I class as a model student and promote, plan, and lead SI sessions.</li>
+            <li>Communicate regularly with students, faculty, and the SI Supervisor, submitting required lesson plans, attendance, and timecards.</li>
+            <li>Hold office hours, join training and evaluations, and follow all scheduling and program policies.</li>
           </ul>
         </div>
       </div>
 
       <div class="timeline-item reveal">
-        <div class="timeline-date">Sep 2025 –<br>Present</div>
+        <div class="timeline-date">Sep 2025 –<br>May 2026</div>
         <div class="timeline-body">
-          <p class="timeline-role">In-class Teaching Assistant</p>
+          <p class="timeline-role">In-class Assistant</p>
           <p class="timeline-company">Orange Coast College · Costa Mesa, CA</p>
           <ul class="timeline-bullets">
-            <li>Supported Prof. Gabriela Ernsberger with C++ Programming 2 and Data Structures courses.</li>
+            <li>Assisted Prof. Gabriela Ernsberger, Dean of C.S. Dept., with CS A250: C++ Programming 2 and CS A200: Data Structures.</li>
           </ul>
         </div>
       </div>
 
       <div class="timeline-item reveal">
-        <div class="timeline-date">Aug 2024 –<br>Present</div>
+        <div class="timeline-date">Mar 2025 –<br>Dec 2025</div>
+        <div class="timeline-body">
+          <p class="timeline-role">In-class Embedded Tutoring</p>
+          <p class="timeline-company">Orange Coast College · Costa Mesa, CA</p>
+          <ul class="timeline-bullets">
+            <li>Assisted Prof. Carly Gonzalez with MATH A140: Business Calculus and MATH A180: Calculus I.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="timeline-item reveal">
+        <div class="timeline-date">Aug 2024 –<br>May 2026</div>
         <div class="timeline-body">
           <p class="timeline-role">Mathematics Tutor</p>
           <p class="timeline-company">Orange Coast College · Costa Mesa, CA</p>
           <ul class="timeline-bullets">
-            <li>Tutored students in Calculus I–III, Linear Algebra, and Differential Equations via workshops and one-on-one sessions.</li>
-            <li>Embedded support for Business Calculus and Calculus I as in-class tutor (Mar–Dec 2025).</li>
+            <li>Tutored students, workshops, and study groups with Calculus I-III, Linear Algebra, and Differential Equations.</li>
           </ul>
         </div>
       </div>
@@ -920,79 +994,47 @@
 
   <!-- ─── PROJECTS ──────────────────────────────────── -->
   <section id="projects">
-    <p class="section-label reveal">Projects</p>
-    <h2 class="section-title reveal">What I've <span class="accent">built</span></h2>
+    <p class="section-label reveal">Selected Work</p>
+    <h2 class="section-title reveal">Resume-backed <span class="accent">work</span></h2>
     <div class="projects-grid">
 
-      <!-- Project 1 -->
       <div class="project-card reveal">
-        <!-- Replace this placeholder with <img> or <video> -->
         <div class="media-placeholder project-media">
-          <span class="icon">🎬</span>
-          <span>Project demo video or screenshot</span>
-          <span style="font-size:11px; opacity:0.4;">&lt;img&gt; or &lt;video&gt; goes here</span>
+          <span class="icon">AI</span>
+          <span>Engineering knowledge retrieval</span>
         </div>
         <div class="project-body">
           <div class="project-tags">
             <span class="tag">RAG</span>
+            <span class="tag">Transformers</span>
             <span class="tag">LangChain</span>
             <span class="tag">llama.cpp</span>
-            <span class="tag">C++</span>
           </div>
           <h3 class="project-name">Engineering Knowledge RAG System</h3>
           <p class="project-desc">
-            A retrieval-augmented generation pipeline built for Acorn Engineering. Uses Sentence Transformers for semantic chunking,
-            LangChain for orchestration, and llama.cpp for fully local LLM inference over engineering documents.
+            Built a retrieval-augmented generation system using Transformers, Sentence Transformers,
+            LangChain-based chunking, and llama.cpp for local LLM inference and engineering knowledge retrieval.
           </p>
-          <div class="project-links">
-            <a href="#">GitHub →</a>
-            <a href="#">Case Study →</a>
-          </div>
         </div>
       </div>
 
-      <!-- Project 2 -->
       <div class="project-card reveal">
         <div class="media-placeholder project-media">
-          <span class="icon">🎬</span>
-          <span>Project demo video or screenshot</span>
-          <span style="font-size:11px; opacity:0.4;">&lt;img&gt; or &lt;video&gt; goes here</span>
+          <span class="icon">CAD</span>
+          <span>Engineering drawing software</span>
         </div>
         <div class="project-body">
           <div class="project-tags">
-            <span class="tag">SolidWorks API</span>
-            <span class="tag">eDrawings</span>
+            <span class="tag">Visual Studio</span>
             <span class="tag">C++</span>
+            <span class="tag">SolidWorks</span>
+            <span class="tag">eDrawings</span>
           </div>
-          <h3 class="project-name">CAD Drawing Automation Tool</h3>
+          <h3 class="project-name">Engineering Drawing Software</h3>
           <p class="project-desc">
-            Internal tool for processing and working with engineering drawings via the SolidWorks and eDrawings APIs.
-            Reduced manual review time for the engineering team.
+            Developed internally used software to work with engineering drawings using Visual Studio,
+            C++, SolidWorks, and eDrawings APIs.
           </p>
-          <div class="project-links">
-            <a href="#">GitHub →</a>
-            <a href="#">Demo →</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Project 3 — placeholder for your next project -->
-      <div class="project-card reveal" style="border-style: dashed; opacity: 0.6;">
-        <div class="media-placeholder project-media" style="height: 220px;">
-          <span class="icon">➕</span>
-          <span>Your next project</span>
-        </div>
-        <div class="project-body">
-          <div class="project-tags">
-            <span class="tag">Coming Soon</span>
-          </div>
-          <h3 class="project-name">New Project</h3>
-          <p class="project-desc">
-            Add a description, tech stack, and links for your next project here.
-          </p>
-          <div class="project-links">
-            <a href="#">GitHub →</a>
-          </div>
         </div>
       </div>
 
@@ -1008,11 +1050,10 @@
       <div class="skill-group reveal">
         <p class="skill-group-name">Languages</p>
         <div class="skill-pills">
-          <span class="skill-pill">Java</span>
           <span class="skill-pill">Python</span>
           <span class="skill-pill">C/C++</span>
           <span class="skill-pill">SQL</span>
-          <span class="skill-pill">PL/SQL</span>
+          <span class="skill-pill">Java</span>
           <span class="skill-pill">JavaScript</span>
           <span class="skill-pill">TypeScript</span>
           <span class="skill-pill">HTML/CSS</span>
@@ -1023,15 +1064,14 @@
         <p class="skill-group-name">Frameworks &amp; Libraries</p>
         <div class="skill-pills">
           <span class="skill-pill">React</span>
-          <span class="skill-pill">Redux</span>
           <span class="skill-pill">Node.js</span>
           <span class="skill-pill">Express</span>
+          <span class="skill-pill">NGINX</span>
           <span class="skill-pill">PyTorch</span>
           <span class="skill-pill">llama.cpp</span>
-          <span class="skill-pill">gRPC</span>
-          <span class="skill-pill">Hadoop</span>
-          <span class="skill-pill">JUnit</span>
-          <span class="skill-pill">NGINX</span>
+          <span class="skill-pill">LangChain</span>
+          <span class="skill-pill">TensorFlow</span>
+          <span class="skill-pill">Scikit-learn</span>
         </div>
       </div>
 
@@ -1041,8 +1081,8 @@
           <span class="skill-pill">TCP/IP</span>
           <span class="skill-pill">DNS</span>
           <span class="skill-pill">DHCP</span>
-          <span class="skill-pill">VPN</span>
           <span class="skill-pill">Switch/Router CLI</span>
+          <span class="skill-pill">VPN</span>
         </div>
       </div>
 
