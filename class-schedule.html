@@ -1,0 +1,2101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Weekly Class Schedule Editor</title>
+
+  <style>
+    :root {
+      --page-background: #f3f5f8;
+      --surface: #ffffff;
+      --surface-muted: #f8fafc;
+      --text-primary: #172033;
+      --text-secondary: #64748b;
+      --border: #d8e0ea;
+      --grid-line: #e3e8ef;
+      --grid-line-strong: #cbd5e1;
+      --focus: #2563eb;
+
+      /* Change this value to make the on-screen schedule taller or shorter. */
+      --grid-height: clamp(630px, 73vh, 760px);
+
+      --time-column-width: 76px;
+      --day-header-height: 44px;
+      --block-gap: 6px;
+      --block-radius: 9px;
+
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      color-scheme: light;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--page-background);
+      color: var(--text-primary);
+    }
+
+    body {
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      line-height: 1.35;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button,
+    .toolbar-link {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-primary);
+      min-height: 38px;
+      padding: 7px 12px;
+      font-weight: 650;
+      cursor: pointer;
+      transition:
+        background-color 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        opacity 120ms ease;
+    }
+
+    .toolbar-link {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
+    }
+
+    button:hover:not(:disabled),
+    .toolbar-link:hover {
+      background: #f8fafc;
+      border-color: #b9c5d4;
+    }
+
+    button:focus-visible,
+    .toolbar-link:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    .class-block:focus-visible {
+      outline: 3px solid rgb(37 99 235 / 22%);
+      outline-offset: 2px;
+      border-color: var(--focus);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.42;
+    }
+
+    .primary-button {
+      color: #ffffff;
+      background: #1d4ed8;
+      border-color: #1d4ed8;
+    }
+
+    .primary-button:hover:not(:disabled) {
+      background: #1e40af;
+      border-color: #1e40af;
+    }
+
+    .danger-button {
+      color: #b42318;
+      border-color: #f1b4af;
+      background: #fff8f7;
+    }
+
+    .danger-button:hover:not(:disabled) {
+      background: #fff1ef;
+      border-color: #e99a93;
+    }
+
+    .app-shell {
+      width: min(1760px, 100%);
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .app-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 12px;
+    }
+
+    .toolbar-group {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 310px;
+      align-items: start;
+      gap: 14px;
+    }
+
+    .schedule-card,
+    .editor-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgb(15 23 42 / 7%);
+    }
+
+    .schedule-card {
+      min-width: 0;
+      padding: 18px;
+    }
+
+    .schedule-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      margin-bottom: 14px;
+    }
+
+    .schedule-heading h1 {
+      margin: 0 0 9px;
+      font-size: clamp(22px, 2vw, 30px);
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 22px;
+      min-height: 24px;
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .legend-swatch {
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      border: 2px solid;
+      border-radius: 6px;
+    }
+
+    .total-units {
+      flex: 0 0 auto;
+      padding-top: 4px;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 650;
+      white-space: nowrap;
+    }
+
+    .schedule-scroll {
+      width: 100%;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      border-radius: 12px;
+    }
+
+    .schedule-stage {
+      display: grid;
+      grid-template-columns: var(--time-column-width) minmax(820px, 1fr);
+      grid-template-rows: var(--day-header-height) var(--grid-height);
+      min-width: 980px;
+    }
+
+    .corner-header {
+      grid-column: 1;
+      grid-row: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 12px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 750;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+    }
+
+    .day-header {
+      grid-column: 2;
+      grid-row: 1;
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-bottom: 0;
+      border-radius: 12px 12px 0 0;
+      background: var(--surface);
+    }
+
+    .day-heading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 0;
+      border-left: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 750;
+    }
+
+    .day-heading:first-child {
+      border-left: 0;
+    }
+
+    .time-axis {
+      position: relative;
+      grid-column: 1;
+      grid-row: 2;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .time-label {
+      position: absolute;
+      right: 12px;
+      transform: translateY(-50%);
+      white-space: nowrap;
+    }
+
+    .time-label.first {
+      transform: translateY(0);
+    }
+
+    .time-label.last {
+      transform: translateY(-100%);
+    }
+
+    .grid-body {
+      position: relative;
+      grid-column: 2;
+      grid-row: 2;
+      overflow: hidden;
+      isolation: isolate;
+      border: 1px solid var(--border);
+      border-radius: 0 0 12px 12px;
+      background: var(--surface);
+      touch-action: none;
+    }
+
+    .horizontal-grid-line,
+    .vertical-grid-line {
+      position: absolute;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .horizontal-grid-line {
+      right: 0;
+      left: 0;
+      height: 1px;
+      background: var(--grid-line);
+    }
+
+    .horizontal-grid-line.strong {
+      background: var(--grid-line-strong);
+    }
+
+    .vertical-grid-line {
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: var(--grid-line);
+    }
+
+    .class-block {
+      position: absolute;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      min-height: 18px;
+      overflow: hidden;
+      padding: 7px 9px 8px;
+      border: 2px solid;
+      border-radius: var(--block-radius);
+      box-shadow: 0 1px 2px rgb(15 23 42 / 8%);
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      transition:
+        box-shadow 100ms ease,
+        filter 100ms ease,
+        outline-color 100ms ease;
+    }
+
+    .class-block:hover {
+      filter: saturate(1.04);
+      box-shadow: 0 3px 9px rgb(15 23 42 / 13%);
+    }
+
+    .class-block.selected {
+      z-index: 4;
+      outline: 3px solid rgb(37 99 235 / 25%);
+      outline-offset: 2px;
+      box-shadow: 0 5px 15px rgb(15 23 42 / 18%);
+    }
+
+    .class-block.dragging {
+      z-index: 6;
+      cursor: grabbing;
+      transition: none;
+      box-shadow: 0 9px 22px rgb(15 23 42 / 24%);
+    }
+
+    .block-course {
+      overflow: hidden;
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.12;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .block-section {
+      overflow: hidden;
+      margin-top: 2px;
+      font-size: 9.5px;
+      font-weight: 750;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .block-footer {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 5px;
+      min-width: 0;
+      margin-top: auto;
+      padding-top: 2px;
+    }
+
+    .block-room {
+      min-width: 0;
+      overflow: hidden;
+      font-size: 9.5px;
+      font-weight: 650;
+      line-height: 1.05;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .block-time {
+      flex: 0 0 auto;
+      font-size: 8.5px;
+      font-weight: 550;
+      line-height: 1.05;
+      white-space: nowrap;
+      opacity: 0.92;
+    }
+
+    .class-block.compact {
+      padding: 5px 8px 6px;
+    }
+
+    .class-block.compact .block-course {
+      font-size: 11px;
+    }
+
+    .class-block.compact .block-section,
+    .class-block.compact .block-room {
+      font-size: 8.5px;
+    }
+
+    .class-block.compact .block-time {
+      font-size: 7.8px;
+    }
+
+    .resize-handle {
+      position: absolute;
+      right: 5px;
+      bottom: 1px;
+      left: 5px;
+      height: 7px;
+      border-radius: 4px;
+      cursor: ns-resize;
+      opacity: 0;
+      transition: opacity 100ms ease;
+    }
+
+    .resize-handle::after {
+      position: absolute;
+      right: 38%;
+      bottom: 1px;
+      left: 38%;
+      height: 2px;
+      content: "";
+      border-radius: 999px;
+      background: currentColor;
+      opacity: 0.55;
+    }
+
+    .class-block:hover .resize-handle,
+    .class-block.selected .resize-handle {
+      opacity: 1;
+    }
+
+    .units-footer {
+      margin-top: 11px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      font-weight: 550;
+    }
+
+    .editor-panel {
+      position: sticky;
+      top: 12px;
+      overflow: hidden;
+    }
+
+    .editor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .editor-header h2 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      min-height: 32px;
+      padding: 0;
+      color: var(--text-secondary);
+      font-size: 18px;
+    }
+
+    .editor-empty {
+      margin: 0;
+      padding: 18px 16px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .editor-form {
+      display: none;
+      padding: 15px 16px 17px;
+    }
+
+    .editor-panel.has-selection .editor-empty {
+      display: none;
+    }
+
+    .editor-panel.has-selection .editor-form {
+      display: block;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .field label {
+      color: #475569;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.015em;
+    }
+
+    .field input,
+    .field select {
+      width: 100%;
+      min-width: 0;
+      height: 38px;
+      padding: 7px 9px;
+      color: var(--text-primary);
+      border: 1px solid #cbd5e1;
+      border-radius: 7px;
+      background: #ffffff;
+    }
+
+    .field input[type="color"] {
+      padding: 3px;
+      cursor: pointer;
+    }
+
+    .selected-summary {
+      margin: 0 0 13px;
+      padding: 10px;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface-muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .editor-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .editor-actions .danger-button {
+      grid-column: 1 / -1;
+    }
+
+    .screen-reader-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      margin: -1px;
+      padding: 0;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 1100px) {
+      .workspace {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .editor-panel {
+        position: static;
+      }
+
+      .editor-form .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .selected-summary,
+      .editor-actions {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .app-shell {
+        padding: 10px;
+      }
+
+      .app-toolbar,
+      .schedule-heading {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .schedule-card {
+        padding: 13px;
+      }
+
+      .total-units {
+        padding-top: 0;
+      }
+
+      .editor-form .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .schedule-stage {
+        grid-template-columns: 68px minmax(820px, 1fr);
+      }
+    }
+
+    @page {
+      size: landscape;
+      margin: 7mm;
+    }
+
+    @media print {
+      :root {
+        --grid-height: 600px;
+        --time-column-width: 61px;
+        --day-header-height: 35px;
+        --block-gap: 4px;
+        --block-radius: 6px;
+      }
+
+      html,
+      body {
+        width: 100%;
+        min-height: auto;
+        background: #ffffff;
+      }
+
+      body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      .app-shell {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .app-toolbar,
+      .editor-panel,
+      .resize-handle {
+        display: none !important;
+      }
+
+      .workspace {
+        display: block;
+      }
+
+      .schedule-card {
+        padding: 0;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      .schedule-heading {
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+
+      .schedule-heading h1 {
+        margin-bottom: 6px;
+        font-size: 21px;
+      }
+
+      .legend {
+        gap: 7px 18px;
+      }
+
+      .legend-item {
+        font-size: 10px;
+      }
+
+      .legend-swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+      }
+
+      .total-units {
+        font-size: 10px;
+      }
+
+      .schedule-scroll {
+        overflow: visible;
+      }
+
+      .schedule-stage {
+        min-width: 0;
+      }
+
+      .corner-header,
+      .time-axis,
+      .units-footer {
+        font-size: 8px;
+      }
+
+      .day-heading {
+        font-size: 11px;
+      }
+
+      .class-block {
+        padding: 5px 6px 6px;
+        border-width: 1.5px;
+        box-shadow: none;
+      }
+
+      .class-block.selected {
+        outline: 0;
+        box-shadow: none;
+      }
+
+      .block-course {
+        font-size: 9px;
+      }
+
+      .block-section,
+      .block-room {
+        font-size: 7px;
+      }
+
+      .block-time {
+        font-size: 6.6px;
+      }
+
+      .class-block.compact {
+        padding: 4px 6px 5px;
+      }
+
+      .class-block.compact .block-course {
+        font-size: 8.5px;
+      }
+
+      .class-block.compact .block-section,
+      .class-block.compact .block-room {
+        font-size: 6.8px;
+      }
+
+      .class-block.compact .block-time {
+        font-size: 6.2px;
+      }
+
+      .units-footer {
+        margin-top: 6px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="app-toolbar" aria-label="Schedule editing controls">
+      <div class="toolbar-group">
+        <a
+          class="toolbar-link"
+          href="index.html"
+          aria-label="Back to Dan Huy Dang's portfolio"
+        >← Portfolio</a>
+        <button id="addButton" class="primary-button" type="button">Add class</button>
+        <button id="duplicateButton" type="button" disabled>Duplicate</button>
+        <button id="deleteButton" class="danger-button" type="button" disabled>Delete</button>
+      </div>
+
+      <div class="toolbar-group">
+        <button id="undoButton" type="button" disabled>Undo</button>
+        <button id="redoButton" type="button" disabled>Redo</button>
+        <button id="resetButton" type="button">Reset</button>
+        <button id="printButton" type="button">Export to PDF / Print</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="schedule-card" aria-labelledby="scheduleTitle">
+        <div class="schedule-heading">
+          <div>
+            <h1 id="scheduleTitle">Weekly Class Schedule</h1>
+            <div id="legend" class="legend" aria-label="Course color legend"></div>
+          </div>
+
+          <div class="total-units">12.0 total units</div>
+        </div>
+
+        <div class="schedule-scroll">
+          <div id="scheduleStage" class="schedule-stage">
+            <div class="corner-header">Time</div>
+            <div id="dayHeader" class="day-header"></div>
+            <div id="timeAxis" class="time-axis"></div>
+            <div
+              id="gridBody"
+              class="grid-body"
+              aria-label="Interactive Monday through Friday class schedule"
+            ></div>
+          </div>
+        </div>
+
+        <div class="units-footer">
+          Units: COMPSCI 122A - 4.0 &nbsp; | &nbsp; I&amp;C SCI 6B - 4.0
+          &nbsp; | &nbsp; SWE 43 - 4.0
+        </div>
+      </section>
+
+      <aside id="editorPanel" class="editor-panel" aria-labelledby="editorTitle">
+        <div class="editor-header">
+          <h2 id="editorTitle">Edit class</h2>
+          <button
+            id="closeEditorButton"
+            class="icon-button"
+            type="button"
+            aria-label="Close class editor"
+          >
+            ×
+          </button>
+        </div>
+
+        <p class="editor-empty">
+          Select a class block to edit its course, section, room, day, time, or color.
+        </p>
+
+        <form id="editorForm" class="editor-form">
+          <p id="selectedSummary" class="selected-summary"></p>
+
+          <div class="form-grid">
+            <div class="field">
+              <label for="courseInput">Course name</label>
+              <input id="courseInput" name="course" type="text" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="sectionInput">Section type</label>
+              <input id="sectionInput" name="section" type="text" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="roomInput">Room</label>
+              <input id="roomInput" name="room" type="text" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="dayInput">Day</label>
+              <select id="dayInput" name="day"></select>
+            </div>
+
+            <div class="form-row">
+              <div class="field">
+                <label for="startInput">Start time</label>
+                <select id="startInput" name="start"></select>
+              </div>
+
+              <div class="field">
+                <label for="endInput">End time</label>
+                <select id="endInput" name="end"></select>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="colorInput">Block color</label>
+              <input id="colorInput" name="color" type="color">
+            </div>
+          </div>
+
+          <div class="editor-actions">
+            <button id="editorDuplicateButton" type="button">Duplicate</button>
+            <button id="editorPrintButton" type="button">Print</button>
+            <button id="editorDeleteButton" class="danger-button" type="button">
+              Delete selected class
+            </button>
+          </div>
+        </form>
+      </aside>
+    </main>
+
+    <div id="liveRegion" class="screen-reader-only" aria-live="polite"></div>
+  </div>
+
+  <script>
+    "use strict";
+
+    /*
+     * ================================================================
+     * SCHEDULE CONFIGURATION
+     * ================================================================
+     * Edit these constants to change the weekdays, visible time range,
+     * snapping interval, or minimum allowed class duration.
+     */
+
+    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+    const RANGE_START = 8 * 60 + 30; // 8:30 AM
+    const RANGE_END = 19 * 60;       // 7:00 PM
+
+    const SNAP_MINUTES = 10;
+    const MIN_DURATION = 20;
+
+    const STORAGE_KEY = "weekly-class-schedule-editor-v1";
+
+    /*
+     * ================================================================
+     * SUBJECT COLORS
+     * ================================================================
+     * These are the pastel colors used by the original schedule.
+     * Each class stores its own background color. Borders and readable
+     * text colors are calculated automatically.
+     */
+
+    const COLORS = {
+      compsci: "#dbeafe",
+      icsci: "#e2f2e8",
+      swe: "#f1dcf5"
+    };
+
+    /*
+     * ================================================================
+     * ORIGINAL SCHEDULE DATA
+     * ================================================================
+     * Times are stored as minutes after midnight. Each meeting is an
+     * independent block, allowing it to be moved to another weekday.
+     */
+
+    const INITIAL_CLASSES = [
+      {
+        id: "compsci-discussion-friday",
+        course: "COMPSCI 122A",
+        section: "DISCUSSION A1",
+        room: "PSCB 120",
+        day: 4,
+        start: 9 * 60,
+        end: 9 * 60 + 50,
+        color: COLORS.compsci
+      },
+      {
+        id: "compsci-lecture-tuesday",
+        course: "COMPSCI 122A",
+        section: "LECTURE A",
+        room: "PSLH 100",
+        day: 1,
+        start: 15 * 60 + 30,
+        end: 16 * 60 + 50,
+        color: COLORS.compsci
+      },
+      {
+        id: "compsci-lecture-thursday",
+        course: "COMPSCI 122A",
+        section: "LECTURE A",
+        room: "PSLH 100",
+        day: 3,
+        start: 15 * 60 + 30,
+        end: 16 * 60 + 50,
+        color: COLORS.compsci
+      },
+      {
+        id: "icsci-lecture-monday",
+        course: "I&C SCI 6B",
+        section: "LECTURE B",
+        room: "ELH 100",
+        day: 0,
+        start: 15 * 60,
+        end: 15 * 60 + 50,
+        color: COLORS.icsci
+      },
+      {
+        id: "icsci-lecture-wednesday",
+        course: "I&C SCI 6B",
+        section: "LECTURE B",
+        room: "ELH 100",
+        day: 2,
+        start: 15 * 60,
+        end: 15 * 60 + 50,
+        color: COLORS.icsci
+      },
+      {
+        id: "icsci-lecture-friday",
+        course: "I&C SCI 6B",
+        section: "LECTURE B",
+        room: "ELH 100",
+        day: 4,
+        start: 15 * 60,
+        end: 15 * 60 + 50,
+        color: COLORS.icsci
+      },
+      {
+        id: "icsci-discussion-monday",
+        course: "I&C SCI 6B",
+        section: "DISCUSSION 2",
+        room: "ELH 100",
+        day: 0,
+        start: 17 * 60,
+        end: 18 * 60 + 50,
+        color: COLORS.icsci
+      },
+      {
+        id: "swe-lecture-tuesday",
+        course: "SWE 43",
+        section: "LECTURE B",
+        room: "HSLH 100A",
+        day: 1,
+        start: 11 * 60,
+        end: 12 * 60 + 20,
+        color: COLORS.swe
+      },
+      {
+        id: "swe-lecture-thursday",
+        course: "SWE 43",
+        section: "LECTURE B",
+        room: "HSLH 100A",
+        day: 3,
+        start: 11 * 60,
+        end: 12 * 60 + 20,
+        color: COLORS.swe
+      },
+      {
+        id: "swe-discussion-wednesday",
+        course: "SWE 43",
+        section: "DISCUSSION B1",
+        room: "ALP 2500",
+        day: 2,
+        start: 10 * 60,
+        end: 10 * 60 + 50,
+        color: COLORS.swe
+      }
+    ];
+
+    const COURSE_ORDER = ["COMPSCI 122A", "I&C SCI 6B", "SWE 43"];
+
+    const elements = {
+      gridBody: document.getElementById("gridBody"),
+      dayHeader: document.getElementById("dayHeader"),
+      timeAxis: document.getElementById("timeAxis"),
+      legend: document.getElementById("legend"),
+      editorPanel: document.getElementById("editorPanel"),
+      editorForm: document.getElementById("editorForm"),
+      selectedSummary: document.getElementById("selectedSummary"),
+      liveRegion: document.getElementById("liveRegion"),
+
+      courseInput: document.getElementById("courseInput"),
+      sectionInput: document.getElementById("sectionInput"),
+      roomInput: document.getElementById("roomInput"),
+      dayInput: document.getElementById("dayInput"),
+      startInput: document.getElementById("startInput"),
+      endInput: document.getElementById("endInput"),
+      colorInput: document.getElementById("colorInput"),
+
+      addButton: document.getElementById("addButton"),
+      duplicateButton: document.getElementById("duplicateButton"),
+      deleteButton: document.getElementById("deleteButton"),
+      undoButton: document.getElementById("undoButton"),
+      redoButton: document.getElementById("redoButton"),
+      resetButton: document.getElementById("resetButton"),
+      printButton: document.getElementById("printButton"),
+      closeEditorButton: document.getElementById("closeEditorButton"),
+      editorDuplicateButton: document.getElementById("editorDuplicateButton"),
+      editorDeleteButton: document.getElementById("editorDeleteButton"),
+      editorPrintButton: document.getElementById("editorPrintButton")
+    };
+
+    let classes = loadSavedClasses();
+    let selectedId = null;
+    let undoStack = [];
+    let redoStack = [];
+    let interaction = null;
+
+    function clone(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function makeId() {
+      if (window.crypto && typeof window.crypto.randomUUID === "function") {
+        return window.crypto.randomUUID();
+      }
+
+      return `class-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function clamp(value, minimum, maximum) {
+      return Math.min(Math.max(value, minimum), maximum);
+    }
+
+    function snapMinutes(value) {
+      return Math.round(value / SNAP_MINUTES) * SNAP_MINUTES;
+    }
+
+    function snapshot() {
+      return JSON.stringify(classes);
+    }
+
+    function saveSchedule() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(classes));
+      } catch (error) {
+        console.warn("The schedule could not be saved to localStorage.", error);
+      }
+    }
+
+    function sanitizeClass(item) {
+      const start = clamp(
+        snapMinutes(Number(item.start) || RANGE_START),
+        RANGE_START,
+        RANGE_END - MIN_DURATION
+      );
+
+      const end = clamp(
+        snapMinutes(Number(item.end) || start + 50),
+        start + MIN_DURATION,
+        RANGE_END
+      );
+
+      return {
+        id: typeof item.id === "string" && item.id ? item.id : makeId(),
+        course: String(item.course || "NEW COURSE"),
+        section: String(item.section || "LECTURE"),
+        room: String(item.room || "TBD"),
+        day: clamp(Math.round(Number(item.day) || 0), 0, DAYS.length - 1),
+        start,
+        end,
+        color: /^#[0-9a-f]{6}$/i.test(String(item.color))
+          ? String(item.color)
+          : COLORS.compsci
+      };
+    }
+
+    function loadSavedClasses() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+
+        if (Array.isArray(saved)) {
+          return saved.map(sanitizeClass);
+        }
+      } catch (error) {
+        console.warn("The saved schedule could not be read.", error);
+      }
+
+      return clone(INITIAL_CLASSES);
+    }
+
+    function recordPreviousSnapshot(previousSnapshot) {
+      if (previousSnapshot === snapshot()) {
+        return;
+      }
+
+      undoStack.push(previousSnapshot);
+      redoStack = [];
+      saveSchedule();
+      updateControlStates();
+    }
+
+    function restoreSnapshot(serialized) {
+      const parsed = JSON.parse(serialized);
+      classes = parsed.map(sanitizeClass);
+
+      if (selectedId && !classes.some((item) => item.id === selectedId)) {
+        selectedId = null;
+      }
+
+      saveSchedule();
+      renderAll();
+    }
+
+    function undo() {
+      if (!undoStack.length) {
+        return;
+      }
+
+      const current = snapshot();
+      const previous = undoStack.pop();
+
+      redoStack.push(current);
+      restoreSnapshot(previous);
+    }
+
+    function redo() {
+      if (!redoStack.length) {
+        return;
+      }
+
+      const current = snapshot();
+      const next = redoStack.pop();
+
+      undoStack.push(current);
+      restoreSnapshot(next);
+    }
+
+    function minutesToInput(minutes) {
+      const hours = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+
+      return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
+    }
+
+    function inputToMinutes(value) {
+      const [hours, minutes] = value.split(":").map(Number);
+      return hours * 60 + minutes;
+    }
+
+    function formatTime(minutes, includePeriod = true) {
+      const hours24 = Math.floor(minutes / 60);
+      const mins = minutes % 60;
+      const period = hours24 >= 12 ? "PM" : "AM";
+      const hours12 = hours24 % 12 || 12;
+      const minuteText = String(mins).padStart(2, "0");
+
+      return `${hours12}:${minuteText}${includePeriod ? ` ${period}` : ""}`;
+    }
+
+    function formatTimeRange(start, end) {
+      const startPeriod = start >= 12 * 60 ? "PM" : "AM";
+      const endPeriod = end >= 12 * 60 ? "PM" : "AM";
+
+      if (startPeriod === endPeriod) {
+        return `${formatTime(start, false)}-${formatTime(end, true)}`;
+      }
+
+      return `${formatTime(start, true)}-${formatTime(end, true)}`;
+    }
+
+    function percentForMinute(minutes) {
+      return ((minutes - RANGE_START) / (RANGE_END - RANGE_START)) * 100;
+    }
+
+    function hexToRgb(hex) {
+      const normalized = hex.replace("#", "");
+      const value = parseInt(normalized, 16);
+
+      return {
+        r: (value >> 16) & 255,
+        g: (value >> 8) & 255,
+        b: value & 255
+      };
+    }
+
+    function rgbToHex({ r, g, b }) {
+      const channel = (value) =>
+        clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0");
+
+      return `#${channel(r)}${channel(g)}${channel(b)}`;
+    }
+
+    function darkenColor(hex, amount = 0.38) {
+      const rgb = hexToRgb(hex);
+
+      return rgbToHex({
+        r: rgb.r * (1 - amount),
+        g: rgb.g * (1 - amount),
+        b: rgb.b * (1 - amount)
+      });
+    }
+
+    function readableTextColor(hex) {
+      const { r, g, b } = hexToRgb(hex);
+
+      const normalized = [r, g, b].map((channel) => {
+        const value = channel / 255;
+        return value <= 0.03928
+          ? value / 12.92
+          : Math.pow((value + 0.055) / 1.055, 2.4);
+      });
+
+      const luminance =
+        0.2126 * normalized[0] +
+        0.7152 * normalized[1] +
+        0.0722 * normalized[2];
+
+      return luminance > 0.52 ? darkenColor(hex, 0.7) : "#ffffff";
+    }
+
+    function getSelectedClass() {
+      return classes.find((item) => item.id === selectedId) || null;
+    }
+
+    function announce(message) {
+      elements.liveRegion.textContent = "";
+
+      window.setTimeout(() => {
+        elements.liveRegion.textContent = message;
+      }, 20);
+    }
+
+    function renderDayHeader() {
+      elements.dayHeader.replaceChildren();
+
+      DAYS.forEach((day) => {
+        const heading = document.createElement("div");
+        heading.className = "day-heading";
+        heading.textContent = day;
+        elements.dayHeader.appendChild(heading);
+      });
+    }
+
+    function renderTimeAxisAndGrid() {
+      elements.timeAxis.replaceChildren();
+      elements.gridBody.replaceChildren();
+
+      for (
+        let minute = RANGE_START;
+        minute <= RANGE_END;
+        minute += 30
+      ) {
+        const percentage = percentForMinute(minute);
+        const isStrong =
+          minute === RANGE_START ||
+          minute === RANGE_END ||
+          minute % 60 === 0;
+
+        const line = document.createElement("div");
+        line.className = `horizontal-grid-line${isStrong ? " strong" : ""}`;
+        line.style.top = `${percentage}%`;
+        elements.gridBody.appendChild(line);
+      }
+
+      const labelMinutes = [RANGE_START];
+
+      for (
+        let minute = Math.ceil(RANGE_START / 60) * 60;
+        minute <= RANGE_END;
+        minute += 60
+      ) {
+        if (!labelMinutes.includes(minute)) {
+          labelMinutes.push(minute);
+        }
+      }
+
+      labelMinutes.forEach((minute, index) => {
+        const label = document.createElement("div");
+        label.className = "time-label";
+
+        if (index === 0) {
+          label.classList.add("first");
+        }
+
+        if (minute === RANGE_END) {
+          label.classList.add("last");
+        }
+
+        label.style.top = `${percentForMinute(minute)}%`;
+        label.textContent = formatTime(minute, true);
+        elements.timeAxis.appendChild(label);
+      });
+
+      for (let index = 1; index < DAYS.length; index += 1) {
+        const line = document.createElement("div");
+        line.className = "vertical-grid-line";
+        line.style.left = `${(index / DAYS.length) * 100}%`;
+        elements.gridBody.appendChild(line);
+      }
+    }
+
+    function positionBlock(element, item) {
+      const dayWidth = 100 / DAYS.length;
+      const duration = item.end - item.start;
+
+      element.style.left =
+        `calc(${item.day * dayWidth}% + var(--block-gap))`;
+
+      element.style.width =
+        `calc(${dayWidth}% - (var(--block-gap) * 2))`;
+
+      element.style.top = `${percentForMinute(item.start)}%`;
+
+      element.style.height =
+        `${(duration / (RANGE_END - RANGE_START)) * 100}%`;
+    }
+
+    function updateBlockContent(element, item) {
+      element.querySelector(".block-course").textContent = item.course;
+      element.querySelector(".block-section").textContent = item.section;
+      element.querySelector(".block-room").textContent = item.room;
+      element.querySelector(".block-time").textContent =
+        formatTimeRange(item.start, item.end);
+
+      element.setAttribute(
+        "aria-label",
+        `${item.course}, ${item.section}, ${DAYS[item.day]}, ` +
+        `${formatTimeRange(item.start, item.end)}, ${item.room}`
+      );
+
+      element.style.backgroundColor = item.color;
+      element.style.borderColor = darkenColor(item.color, 0.42);
+      element.style.color = readableTextColor(item.color);
+
+      element.classList.toggle("compact", item.end - item.start <= 60);
+      element.classList.toggle("selected", item.id === selectedId);
+
+      positionBlock(element, item);
+    }
+
+    function createClassBlock(item) {
+      const block = document.createElement("article");
+      block.className = "class-block";
+      block.dataset.id = item.id;
+      block.tabIndex = 0;
+
+      const course = document.createElement("div");
+      course.className = "block-course";
+
+      const section = document.createElement("div");
+      section.className = "block-section";
+
+      const footer = document.createElement("div");
+      footer.className = "block-footer";
+
+      const room = document.createElement("span");
+      room.className = "block-room";
+
+      const time = document.createElement("span");
+      time.className = "block-time";
+
+      const resizeHandle = document.createElement("div");
+      resizeHandle.className = "resize-handle";
+      resizeHandle.setAttribute("aria-hidden", "true");
+
+      footer.append(room, time);
+      block.append(course, section, footer, resizeHandle);
+
+      updateBlockContent(block, item);
+
+      return block;
+    }
+
+    function renderBlocks() {
+      const sortedClasses = [...classes].sort((first, second) => {
+        return (
+          first.day - second.day ||
+          first.start - second.start ||
+          first.end - second.end
+        );
+      });
+
+      sortedClasses.forEach((item) => {
+        elements.gridBody.appendChild(createClassBlock(item));
+      });
+    }
+
+    function renderLegend() {
+      elements.legend.replaceChildren();
+
+      const colorsByCourse = new Map();
+
+      classes.forEach((item) => {
+        if (!colorsByCourse.has(item.course)) {
+          colorsByCourse.set(item.course, item.color);
+        }
+      });
+
+      const orderedCourses = [
+        ...COURSE_ORDER.filter((course) => colorsByCourse.has(course)),
+        ...[...colorsByCourse.keys()].filter(
+          (course) => !COURSE_ORDER.includes(course)
+        )
+      ];
+
+      orderedCourses.forEach((course) => {
+        const item = document.createElement("div");
+        item.className = "legend-item";
+
+        const swatch = document.createElement("span");
+        swatch.className = "legend-swatch";
+        swatch.style.backgroundColor = colorsByCourse.get(course);
+        swatch.style.borderColor = darkenColor(
+          colorsByCourse.get(course),
+          0.42
+        );
+
+        const label = document.createElement("span");
+        label.textContent = course;
+
+        item.append(swatch, label);
+        elements.legend.appendChild(item);
+      });
+    }
+
+    function renderSchedule() {
+      renderTimeAxisAndGrid();
+      renderBlocks();
+    }
+
+    function renderAll() {
+      renderLegend();
+      renderSchedule();
+      syncEditorFromSelection();
+      updateControlStates();
+    }
+
+    function setSelected(id, shouldRender = true) {
+      selectedId = id;
+
+      if (shouldRender) {
+        renderAll();
+      } else {
+        document.querySelectorAll(".class-block").forEach((block) => {
+          block.classList.toggle("selected", block.dataset.id === selectedId);
+        });
+
+        syncEditorFromSelection();
+        updateControlStates();
+      }
+    }
+
+    function clearSelection() {
+      selectedId = null;
+      renderAll();
+    }
+
+    function syncEditorFromSelection() {
+      const selected = getSelectedClass();
+      const hasSelection = Boolean(selected);
+
+      elements.editorPanel.classList.toggle("has-selection", hasSelection);
+
+      if (!selected) {
+        return;
+      }
+
+      elements.courseInput.value = selected.course;
+      elements.sectionInput.value = selected.section;
+      elements.roomInput.value = selected.room;
+      elements.dayInput.value = String(selected.day);
+      elements.startInput.value = minutesToInput(selected.start);
+      elements.endInput.value = minutesToInput(selected.end);
+      elements.colorInput.value = selected.color;
+
+      elements.selectedSummary.textContent =
+        `${DAYS[selected.day]} · ` +
+        `${formatTimeRange(selected.start, selected.end)} · ` +
+        `${selected.room}`;
+    }
+
+    function updateControlStates() {
+      const hasSelection = Boolean(getSelectedClass());
+
+      elements.duplicateButton.disabled = !hasSelection;
+      elements.deleteButton.disabled = !hasSelection;
+      elements.undoButton.disabled = undoStack.length === 0;
+      elements.redoButton.disabled = redoStack.length === 0;
+    }
+
+    function populateEditorOptions() {
+      DAYS.forEach((day, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = day;
+        elements.dayInput.appendChild(option);
+      });
+
+      for (
+        let minute = RANGE_START;
+        minute <= RANGE_END;
+        minute += SNAP_MINUTES
+      ) {
+        const startOption = document.createElement("option");
+        startOption.value = minutesToInput(minute);
+        startOption.textContent = formatTime(minute, true);
+
+        const endOption = startOption.cloneNode(true);
+
+        elements.startInput.appendChild(startOption);
+        elements.endInput.appendChild(endOption);
+      }
+    }
+
+    function applyEditorChanges() {
+      const selected = getSelectedClass();
+
+      if (!selected) {
+        return;
+      }
+
+      const previous = snapshot();
+
+      selected.course = elements.courseInput.value.trim() || "NEW COURSE";
+      selected.section = elements.sectionInput.value.trim() || "LECTURE";
+      selected.room = elements.roomInput.value.trim() || "TBD";
+      selected.day = clamp(
+        Number(elements.dayInput.value),
+        0,
+        DAYS.length - 1
+      );
+      selected.color = elements.colorInput.value;
+
+      let start = inputToMinutes(elements.startInput.value);
+      let end = inputToMinutes(elements.endInput.value);
+
+      start = clamp(
+        snapMinutes(start),
+        RANGE_START,
+        RANGE_END - MIN_DURATION
+      );
+
+      end = clamp(
+        snapMinutes(end),
+        start + MIN_DURATION,
+        RANGE_END
+      );
+
+      selected.start = start;
+      selected.end = end;
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      announce(
+        `${selected.course} updated to ${DAYS[selected.day]}, ` +
+        `${formatTimeRange(selected.start, selected.end)}.`
+      );
+    }
+
+    function overlapsExisting(candidate, ignoredId = null) {
+      return classes.some((item) => {
+        if (item.id === ignoredId || item.day !== candidate.day) {
+          return false;
+        }
+
+        return candidate.start < item.end && candidate.end > item.start;
+      });
+    }
+
+    function findAvailableSlot(duration, preferredDay = 0, preferredStart = RANGE_START) {
+      for (let dayOffset = 0; dayOffset < DAYS.length; dayOffset += 1) {
+        const day = (preferredDay + dayOffset) % DAYS.length;
+        const firstStart =
+          dayOffset === 0 ? preferredStart : RANGE_START;
+
+        for (
+          let start = firstStart;
+          start + duration <= RANGE_END;
+          start += SNAP_MINUTES
+        ) {
+          const candidate = {
+            day,
+            start,
+            end: start + duration
+          };
+
+          if (!overlapsExisting(candidate)) {
+            return candidate;
+          }
+        }
+
+        for (
+          let start = RANGE_START;
+          start < firstStart && start + duration <= RANGE_END;
+          start += SNAP_MINUTES
+        ) {
+          const candidate = {
+            day,
+            start,
+            end: start + duration
+          };
+
+          if (!overlapsExisting(candidate)) {
+            return candidate;
+          }
+        }
+      }
+
+      return {
+        day: preferredDay,
+        start: RANGE_START,
+        end: RANGE_START + duration
+      };
+    }
+
+    function addClass() {
+      const previous = snapshot();
+      const duration = 50;
+      const slot = findAvailableSlot(duration);
+
+      const item = {
+        id: makeId(),
+        course: "NEW COURSE",
+        section: "LECTURE",
+        room: "TBD",
+        day: slot.day,
+        start: slot.start,
+        end: slot.end,
+        color: COLORS.compsci
+      };
+
+      classes.push(item);
+      selectedId = item.id;
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      elements.editorPanel.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+
+      elements.courseInput.focus();
+      elements.courseInput.select();
+
+      announce("New class added.");
+    }
+
+    function duplicateSelected() {
+      const selected = getSelectedClass();
+
+      if (!selected) {
+        return;
+      }
+
+      const previous = snapshot();
+      const duration = selected.end - selected.start;
+      const preferredDay = (selected.day + 1) % DAYS.length;
+
+      let slot = {
+        day: preferredDay,
+        start: selected.start,
+        end: selected.end
+      };
+
+      if (overlapsExisting(slot)) {
+        slot = findAvailableSlot(duration, preferredDay, selected.start);
+      }
+
+      const duplicate = {
+        ...clone(selected),
+        id: makeId(),
+        day: slot.day,
+        start: slot.start,
+        end: slot.end
+      };
+
+      classes.push(duplicate);
+      selectedId = duplicate.id;
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      announce(
+        `${duplicate.course} duplicated to ${DAYS[duplicate.day]}, ` +
+        `${formatTimeRange(duplicate.start, duplicate.end)}.`
+      );
+    }
+
+    function deleteSelected() {
+      const selected = getSelectedClass();
+
+      if (!selected) {
+        return;
+      }
+
+      const previous = snapshot();
+      const deletedName = selected.course;
+
+      classes = classes.filter((item) => item.id !== selectedId);
+      selectedId = null;
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      announce(`${deletedName} deleted.`);
+    }
+
+    function resetSchedule() {
+      const confirmed = window.confirm(
+        "Reset the schedule to its original classes, times, rooms, and colors?"
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const previous = snapshot();
+
+      classes = clone(INITIAL_CLASSES);
+      selectedId = null;
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      announce("The original schedule has been restored.");
+    }
+
+    function beginInteraction(event, block, mode) {
+      const item = classes.find((entry) => entry.id === block.dataset.id);
+
+      if (!item) {
+        return;
+      }
+
+      event.preventDefault();
+
+      setSelected(item.id, false);
+
+      const bodyRect = elements.gridBody.getBoundingClientRect();
+      const blockRect = block.getBoundingClientRect();
+
+      interaction = {
+        mode,
+        pointerId: event.pointerId,
+        id: item.id,
+        element: block,
+        previousSnapshot: snapshot(),
+        bodyRect,
+        grabOffsetX: event.clientX - blockRect.left,
+        grabOffsetY: event.clientY - blockRect.top
+      };
+
+      block.classList.add("dragging");
+      block.setPointerCapture(event.pointerId);
+    }
+
+    function updateDrag(event) {
+      if (!interaction || interaction.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const item = classes.find((entry) => entry.id === interaction.id);
+
+      if (!item) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const bodyRect = elements.gridBody.getBoundingClientRect();
+      const pixelsPerMinute =
+        bodyRect.height / (RANGE_END - RANGE_START);
+
+      if (interaction.mode === "drag") {
+        const dayWidth = bodyRect.width / DAYS.length;
+
+        const proposedLeft =
+          event.clientX -
+          bodyRect.left -
+          interaction.grabOffsetX;
+
+        const proposedCenter = proposedLeft + dayWidth / 2;
+
+        item.day = clamp(
+          Math.floor(proposedCenter / dayWidth),
+          0,
+          DAYS.length - 1
+        );
+
+        const proposedTop =
+          event.clientY -
+          bodyRect.top -
+          interaction.grabOffsetY;
+
+        const duration = item.end - item.start;
+
+        const proposedStart =
+          RANGE_START + proposedTop / pixelsPerMinute;
+
+        const newStart = clamp(
+          snapMinutes(proposedStart),
+          RANGE_START,
+          RANGE_END - duration
+        );
+
+        item.start = newStart;
+        item.end = newStart + duration;
+      }
+
+      if (interaction.mode === "resize") {
+        const proposedBottom = event.clientY - bodyRect.top;
+
+        const proposedEnd =
+          RANGE_START + proposedBottom / pixelsPerMinute;
+
+        item.end = clamp(
+          snapMinutes(proposedEnd),
+          item.start + MIN_DURATION,
+          RANGE_END
+        );
+      }
+
+      updateBlockContent(interaction.element, item);
+      syncEditorFromSelection();
+    }
+
+    function finishInteraction(event) {
+      if (!interaction || interaction.pointerId !== event.pointerId) {
+        return;
+      }
+
+      const finishedInteraction = interaction;
+      interaction = null;
+
+      try {
+        finishedInteraction.element.releasePointerCapture(event.pointerId);
+      } catch (error) {
+        // The pointer may already have been released by the browser.
+      }
+
+      finishedInteraction.element.classList.remove("dragging");
+
+      recordPreviousSnapshot(finishedInteraction.previousSnapshot);
+      renderAll();
+
+      const item = classes.find(
+        (entry) => entry.id === finishedInteraction.id
+      );
+
+      if (item) {
+        announce(
+          `${item.course} moved to ${DAYS[item.day]}, ` +
+          `${formatTimeRange(item.start, item.end)}.`
+        );
+      }
+    }
+
+    function moveSelectedWithKeyboard(event, block) {
+      const item = classes.find((entry) => entry.id === block.dataset.id);
+
+      if (!item) {
+        return;
+      }
+
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        setSelected(item.id);
+        return;
+      }
+
+      if (event.key === "Delete" || event.key === "Backspace") {
+        event.preventDefault();
+        setSelected(item.id, false);
+        deleteSelected();
+        return;
+      }
+
+      const isArrow =
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight";
+
+      if (!isArrow) {
+        return;
+      }
+
+      event.preventDefault();
+      setSelected(item.id, false);
+
+      const previous = snapshot();
+      const duration = item.end - item.start;
+
+      if (event.key === "ArrowUp") {
+        item.start = clamp(
+          item.start - SNAP_MINUTES,
+          RANGE_START,
+          RANGE_END - duration
+        );
+        item.end = item.start + duration;
+      }
+
+      if (event.key === "ArrowDown") {
+        item.start = clamp(
+          item.start + SNAP_MINUTES,
+          RANGE_START,
+          RANGE_END - duration
+        );
+        item.end = item.start + duration;
+      }
+
+      if (event.key === "ArrowLeft") {
+        item.day = clamp(item.day - 1, 0, DAYS.length - 1);
+      }
+
+      if (event.key === "ArrowRight") {
+        item.day = clamp(item.day + 1, 0, DAYS.length - 1);
+      }
+
+      recordPreviousSnapshot(previous);
+      renderAll();
+
+      const updatedBlock = elements.gridBody.querySelector(
+        `[data-id="${CSS.escape(item.id)}"]`
+      );
+
+      updatedBlock?.focus();
+    }
+
+    elements.gridBody.addEventListener("pointerdown", (event) => {
+      const block = event.target.closest(".class-block");
+
+      if (!block) {
+        return;
+      }
+
+      const isResizeHandle = Boolean(
+        event.target.closest(".resize-handle")
+      );
+
+      beginInteraction(
+        event,
+        block,
+        isResizeHandle ? "resize" : "drag"
+      );
+    });
+
+    elements.gridBody.addEventListener("pointermove", updateDrag);
+    elements.gridBody.addEventListener("pointerup", finishInteraction);
+    elements.gridBody.addEventListener("pointercancel", finishInteraction);
+
+    elements.gridBody.addEventListener("keydown", (event) => {
+      const block = event.target.closest(".class-block");
+
+      if (block) {
+        moveSelectedWithKeyboard(event, block);
+      }
+    });
+
+    elements.editorForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+    });
+
+    [
+      elements.courseInput,
+      elements.sectionInput,
+      elements.roomInput,
+      elements.dayInput,
+      elements.startInput,
+      elements.endInput,
+      elements.colorInput
+    ].forEach((input) => {
+      input.addEventListener("change", applyEditorChanges);
+    });
+
+    elements.addButton.addEventListener("click", addClass);
+    elements.duplicateButton.addEventListener("click", duplicateSelected);
+    elements.deleteButton.addEventListener("click", deleteSelected);
+    elements.undoButton.addEventListener("click", undo);
+    elements.redoButton.addEventListener("click", redo);
+    elements.resetButton.addEventListener("click", resetSchedule);
+    elements.printButton.addEventListener("click", () => window.print());
+
+    elements.closeEditorButton.addEventListener("click", clearSelection);
+    elements.editorDuplicateButton.addEventListener(
+      "click",
+      duplicateSelected
+    );
+    elements.editorDeleteButton.addEventListener("click", deleteSelected);
+    elements.editorPrintButton.addEventListener(
+      "click",
+      () => window.print()
+    );
+
+    window.addEventListener("keydown", (event) => {
+      const modifier = event.ctrlKey || event.metaKey;
+
+      if (!modifier) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === "z" && !event.shiftKey) {
+        event.preventDefault();
+        undo();
+      }
+
+      if (
+        event.key.toLowerCase() === "y" ||
+        (event.key.toLowerCase() === "z" && event.shiftKey)
+      ) {
+        event.preventDefault();
+        redo();
+      }
+    });
+
+    renderDayHeader();
+    populateEditorOptions();
+    renderAll();
+  </script>
+</body>
+</html>

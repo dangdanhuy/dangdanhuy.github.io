@@ -521,6 +521,45 @@
       font-family: var(--font-mono);
     }
 
+    /* ─── CLASS SCHEDULE ────────────────────────────────── */
+    #class-schedule { background: var(--navy); }
+
+    .schedule-feature {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+      padding: 32px;
+      background: var(--navy2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .schedule-feature:hover {
+      border-color: var(--card-hover-border);
+      transform: translateY(-4px);
+    }
+
+    .schedule-feature-copy { max-width: 680px; }
+
+    .schedule-feature-title {
+      margin-bottom: 10px;
+      font-family: var(--font-display);
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 600;
+    }
+
+    .schedule-feature-desc {
+      color: var(--slate);
+      line-height: 1.7;
+    }
+
+    .schedule-feature .btn {
+      flex: 0 0 auto;
+      text-align: center;
+    }
+
     /* ─── EXPERIENCE ─────────────────────────────────────── */
     #experience { background: var(--navy2); }
 
@@ -768,6 +807,8 @@
       .about-grid { grid-template-columns: 1fr; gap: 36px; }
       .timeline-item { grid-template-columns: 1fr; gap: 8px; }
       .timeline-date { text-align: left; }
+      .schedule-feature { align-items: flex-start; flex-direction: column; gap: 24px; padding: 24px; }
+      .schedule-feature .btn { width: 100%; }
       footer { padding: 28px 24px; flex-direction: column; align-items: flex-start; }
     }
 
@@ -782,12 +823,13 @@
 <body>
 
   <!-- ─── NAV ─────────────────────────────────────── -->
-  <nav>
-    <div class="nav-logo">dan.huy.dang</div>
+  <nav aria-label="Primary navigation">
+    <a class="nav-logo" href="#hero" aria-label="Dan Huy Dang, back to top">dan.huy.dang</a>
     <div class="nav-right">
       <ul class="nav-links">
         <li><a href="#about">About</a></li>
         <li><a href="#education">Education</a></li>
+        <li><a href="class-schedule.html">Class Schedule</a></li>
         <li><a href="#experience">Experience</a></li>
         <li><a href="#projects">Work</a></li>
         <li><a href="#skills">Skills</a></li>
@@ -1100,6 +1142,27 @@
       </div>
 
     </div>
+  </section>
+
+  <!-- ─── CLASS SCHEDULE ────────────────────────────── -->
+  <section id="class-schedule" aria-labelledby="class-schedule-title">
+    <p class="section-label reveal">Student Tools</p>
+    <h2 id="class-schedule-title" class="section-title reveal">
+      Class <span class="accent">Schedule</span>
+    </h2>
+    <article class="schedule-feature reveal">
+      <div class="schedule-feature-copy">
+        <p class="card-eyebrow">Weekly Planner</p>
+        <h3 class="schedule-feature-title">Interactive Class Schedule</h3>
+        <p class="schedule-feature-desc">
+          View the weekly course calendar, adjust class times and rooms, and export
+          the finished schedule for printing.
+        </p>
+      </div>
+      <a class="btn btn-primary" href="class-schedule.html">
+        Open Class Schedule
+      </a>
+    </article>
   </section>
 
   <!-- ─── FOOTER ─────────────────────────────────────── -->
