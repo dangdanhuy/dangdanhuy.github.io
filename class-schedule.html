@@ -241,7 +241,7 @@
       grid-column: 2;
       grid-row: 1;
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(7, minmax(0, 1fr));
       overflow: hidden;
       border: 1px solid var(--border);
       border-bottom: 0;
@@ -823,7 +823,7 @@
             <div
               id="gridBody"
               class="grid-body"
-              aria-label="Interactive Monday through Friday class schedule"
+              aria-label="Interactive Monday through Sunday class schedule"
             ></div>
           </div>
         </div>
@@ -914,11 +914,19 @@
      * ================================================================
      * SCHEDULE CONFIGURATION
      * ================================================================
-     * Edit these constants to change the weekdays, visible time range,
+     * Edit these constants to change the days of the week, visible time range,
      * snapping interval, or minimum allowed class duration.
      */
 
-    const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    const DAYS = [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday"
+    ];
 
     const RANGE_START = 8 * 60 + 30; // 8:30 AM
     const RANGE_END = 19 * 60;       // 7:00 PM
@@ -948,7 +956,7 @@
      * ORIGINAL SCHEDULE DATA
      * ================================================================
      * Times are stored as minutes after midnight. Each meeting is an
-     * independent block, allowing it to be moved to another weekday.
+     * independent block, allowing it to be moved to another day.
      */
 
     const INITIAL_CLASSES = [
