@@ -1066,7 +1066,9 @@
             <div id="legend" class="legend" aria-label="Course color legend"></div>
           </div>
 
-          <div class="total-units">12.0 total units</div>
+          <div id="totalUnits" class="total-units" aria-live="polite">
+            0.0 total units
+          </div>
         </div>
 
         <div class="schedule-scroll">
@@ -1082,9 +1084,8 @@
           </div>
         </div>
 
-        <div class="units-footer">
-          Units: COMPSCI 122A - 4.0 &nbsp; | &nbsp; I&amp;C SCI 6B - 4.0
-          &nbsp; | &nbsp; SWE 43 - 4.0
+        <div id="unitsFooter" class="units-footer" aria-live="polite">
+          No courses scheduled
         </div>
       </section>
 
@@ -1102,7 +1103,8 @@
         </div>
 
         <p class="editor-empty">
-          Select a class block to edit its course, section, room, day, time, or color.
+          Select a class block to edit its course, section, room, day, time,
+          units, or color.
         </p>
 
         <form id="editorForm" class="editor-form">
@@ -1112,6 +1114,19 @@
             <div class="field">
               <label for="courseInput">Course name</label>
               <input id="courseInput" name="course" type="text" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <label for="unitsInput">Units</label>
+              <input
+                id="unitsInput"
+                name="units"
+                type="number"
+                min="0.1"
+                step="0.1"
+                inputmode="decimal"
+                required
+              >
             </div>
 
             <div class="field">
@@ -1220,8 +1235,16 @@
 
     const SNAP_MINUTES = 10;
     const MIN_DURATION = 20;
+    const DEFAULT_UNITS = 4;
 
     const STORAGE_KEY = "weekly-class-schedule-editor-v1";
+
+    const DEFAULT_COURSE_UNITS = {
+      "COMPSCI 122A": 4,
+      "I&C SCI 6B": 4,
+      "SWE 43": 4,
+      "STATS 67": 4
+    };
 
     /*
      * ================================================================
@@ -1349,19 +1372,20 @@
       }
     ];
 
-    const COURSE_ORDER = ["COMPSCI 122A", "I&C SCI 6B", "SWE 43"];
-
     const elements = {
       gridBody: document.getElementById("gridBody"),
       dayHeader: document.getElementById("dayHeader"),
       timeAxis: document.getElementById("timeAxis"),
       legend: document.getElementById("legend"),
+      totalUnits: document.getElementById("totalUnits"),
+      unitsFooter: document.getElementById("unitsFooter"),
       editorPanel: document.getElementById("editorPanel"),
       editorForm: document.getElementById("editorForm"),
       selectedSummary: document.getElementById("selectedSummary"),
       liveRegion: document.getElementById("liveRegion"),
 
       courseInput: document.getElementById("courseInput"),
+      unitsInput: document.getElementById("unitsInput"),
       sectionInput: document.getElementById("sectionInput"),
       roomInput: document.getElementById("roomInput"),
       dayInput: document.getElementById("dayInput"),
@@ -1408,19 +1432,84 @@
       return Math.round(value / SNAP_MINUTES) * SNAP_MINUTES;
     }
 
+    function normalizeCourseName(value) {
+      return String(value || "NEW COURSE").trim().replace(/\s+/g, " ") ||
+        "NEW COURSE";
+    }
+
+    function courseNameKey(value) {
+      return normalizeCourseName(value).toUpperCase();
+    }
+
+    function courseIdForName(value) {
+      const key = courseNameKey(value);
+      const slug = key
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "course";
+
+      let hash = 0;
+
+      for (let index = 0; index < key.length; index += 1) {
+        hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+      }
+
+      return `course-${slug}-${hash.toString(36)}`;
+    }
+
+    function makeUniqueCourseId(courseName) {
+      const base = courseIdForName(courseName);
+      let candidate = base;
+      let suffix = 2;
+
+      while (classes.some((item) => item.courseId === candidate)) {
+        candidate = `${base}-${suffix}`;
+        suffix += 1;
+      }
+
+      return candidate;
+    }
+
+    function isValidUnits(value) {
+      if (value === "" || value === null || value === undefined) {
+        return false;
+      }
+
+      const numeric = Number(value);
+      return Number.isFinite(numeric) && numeric > 0;
+    }
+
+    function normalizeUnits(value, fallback = DEFAULT_UNITS) {
+      const numeric = isValidUnits(value) ? Number(value) : Number(fallback);
+      return Math.round(numeric * 10) / 10;
+    }
+
+    function defaultUnitsForCourse(courseName) {
+      const configured = DEFAULT_COURSE_UNITS[courseNameKey(courseName)];
+      return normalizeUnits(configured, DEFAULT_UNITS);
+    }
+
+    function formatUnits(value) {
+      return normalizeUnits(value, 0).toFixed(1);
+    }
+
     function snapshot() {
       return JSON.stringify(classes);
     }
 
+    function persistSchedule(value) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+    }
+
     function saveSchedule() {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(classes));
+        persistSchedule(classes);
       } catch (error) {
         console.warn("The schedule could not be saved to localStorage.", error);
       }
     }
 
-    function sanitizeClass(item) {
+    function sanitizeClass(item, courseData) {
       const start = clamp(
         snapMinutes(Number(item.start) || RANGE_START),
         RANGE_START,
@@ -1435,7 +1524,9 @@
 
       return {
         id: typeof item.id === "string" && item.id ? item.id : makeId(),
-        course: String(item.course || "NEW COURSE"),
+        courseId: courseData.id,
+        course: courseData.name,
+        units: courseData.units,
         section: String(item.section || "LECTURE"),
         room: String(item.room || "TBD"),
         day: clamp(Math.round(Number(item.day) || 0), 0, DAYS.length - 1),
@@ -1447,18 +1538,76 @@
       };
     }
 
+    function sanitizeClasses(items) {
+      const prepared = items.map((item) => {
+        const courseName = normalizeCourseName(item.course);
+        const providedCourseId =
+          typeof item.courseId === "string" && item.courseId.trim()
+            ? item.courseId.trim()
+            : null;
+
+        return {
+          item,
+          courseName,
+          groupKey: providedCourseId
+            ? `id:${providedCourseId}`
+            : `name:${courseNameKey(courseName)}`,
+          courseId: providedCourseId || courseIdForName(courseName)
+        };
+      });
+
+      const courseRegistry = new Map();
+
+      prepared.forEach((entry) => {
+        if (!courseRegistry.has(entry.groupKey)) {
+          courseRegistry.set(entry.groupKey, {
+            id: entry.courseId,
+            name: entry.courseName,
+            units: defaultUnitsForCourse(entry.courseName),
+            hasExplicitUnits: false
+          });
+        }
+
+        const courseData = courseRegistry.get(entry.groupKey);
+
+        if (!courseData.hasExplicitUnits && isValidUnits(entry.item.units)) {
+          courseData.units = normalizeUnits(entry.item.units);
+          courseData.hasExplicitUnits = true;
+        }
+      });
+
+      return prepared.map((entry) => {
+        const courseData = courseRegistry.get(entry.groupKey);
+        return sanitizeClass(entry.item, courseData);
+      });
+    }
+
     function loadSavedClasses() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
 
         if (Array.isArray(saved)) {
-          return saved.map(sanitizeClass);
+          const migrated = sanitizeClasses(saved);
+
+          if (JSON.stringify(saved) !== JSON.stringify(migrated)) {
+            persistSchedule(migrated);
+          }
+
+          return migrated;
         }
       } catch (error) {
         console.warn("The saved schedule could not be read.", error);
       }
 
-      return clone(INITIAL_CLASSES);
+      const initial = sanitizeClasses(INITIAL_CLASSES);
+
+      try {
+        persistSchedule(initial);
+      } catch (error) {
+        console.warn("The initial schedule could not be saved.", error);
+      }
+
+      return initial;
     }
 
     function recordPreviousSnapshot(previousSnapshot) {
@@ -1474,7 +1623,7 @@
 
     function restoreSnapshot(serialized) {
       const parsed = JSON.parse(serialized);
-      classes = parsed.map(sanitizeClass);
+      classes = sanitizeClasses(parsed);
 
       if (selectedId && !classes.some((item) => item.id === selectedId)) {
         selectedId = null;
@@ -1595,6 +1744,23 @@
       return classes.find((item) => item.id === selectedId) || null;
     }
 
+    function getCourseCatalog() {
+      const coursesById = new Map();
+
+      classes.forEach((item) => {
+        if (!coursesById.has(item.courseId)) {
+          coursesById.set(item.courseId, {
+            id: item.courseId,
+            name: item.course,
+            units: normalizeUnits(item.units),
+            color: item.color
+          });
+        }
+      });
+
+      return [...coursesById.values()];
+    }
+
     function announce(message) {
       elements.liveRegion.textContent = "";
 
@@ -1689,6 +1855,7 @@
     }
 
     function updateBlockContent(element, item) {
+      element.dataset.courseId = item.courseId;
       element.querySelector(".block-course").textContent = item.course;
       element.querySelector(".block-section").textContent = item.section;
       element.querySelector(".block-room").textContent = item.room;
@@ -1761,39 +1928,39 @@
     function renderLegend() {
       elements.legend.replaceChildren();
 
-      const colorsByCourse = new Map();
-
-      classes.forEach((item) => {
-        if (!colorsByCourse.has(item.course)) {
-          colorsByCourse.set(item.course, item.color);
-        }
-      });
-
-      const orderedCourses = [
-        ...COURSE_ORDER.filter((course) => colorsByCourse.has(course)),
-        ...[...colorsByCourse.keys()].filter(
-          (course) => !COURSE_ORDER.includes(course)
-        )
-      ];
-
-      orderedCourses.forEach((course) => {
+      getCourseCatalog().forEach((course) => {
         const item = document.createElement("div");
         item.className = "legend-item";
 
         const swatch = document.createElement("span");
         swatch.className = "legend-swatch";
-        swatch.style.backgroundColor = colorsByCourse.get(course);
-        swatch.style.borderColor = darkenColor(
-          colorsByCourse.get(course),
-          0.42
-        );
+        swatch.style.backgroundColor = course.color;
+        swatch.style.borderColor = darkenColor(course.color, 0.42);
 
         const label = document.createElement("span");
-        label.textContent = course;
+        label.textContent = course.name;
 
         item.append(swatch, label);
         elements.legend.appendChild(item);
       });
+    }
+
+    function renderCourseSummary() {
+      const courses = getCourseCatalog();
+      const total = courses.reduce((sum, course) => sum + course.units, 0);
+
+      elements.totalUnits.textContent = `${formatUnits(total)} total units`;
+
+      if (!courses.length) {
+        elements.unitsFooter.textContent = "No courses scheduled";
+        return;
+      }
+
+      const summary = courses
+        .map((course) => `${course.name} - ${formatUnits(course.units)}`)
+        .join("  |  ");
+
+      elements.unitsFooter.textContent = `Units: ${summary}`;
     }
 
     function renderSchedule() {
@@ -1803,6 +1970,7 @@
 
     function renderAll() {
       renderLegend();
+      renderCourseSummary();
       renderSchedule();
       syncEditorFromSelection();
       updateControlStates();
@@ -1839,6 +2007,7 @@
       }
 
       elements.courseInput.value = selected.course;
+      elements.unitsInput.value = formatUnits(selected.units);
       elements.sectionInput.value = selected.section;
       elements.roomInput.value = selected.room;
       elements.dayInput.value = String(selected.day);
@@ -1849,7 +2018,7 @@
       elements.selectedSummary.textContent =
         `${DAYS[selected.day]} · ` +
         `${formatTimeRange(selected.start, selected.end)} · ` +
-        `${selected.room}`;
+        `${selected.room} · ${formatUnits(selected.units)} units`;
     }
 
     function updateControlStates() {
@@ -1892,9 +2061,45 @@
         return;
       }
 
-      const previous = snapshot();
+      elements.unitsInput.setCustomValidity("");
 
-      selected.course = elements.courseInput.value.trim() || "NEW COURSE";
+      if (
+        !isValidUnits(elements.unitsInput.value) ||
+        !elements.unitsInput.checkValidity()
+      ) {
+        elements.unitsInput.setCustomValidity(
+          "Enter a positive unit value, such as 3, 4, or 4.5."
+        );
+        elements.unitsInput.reportValidity();
+        elements.unitsInput.value = formatUnits(selected.units);
+        return;
+      }
+
+      const previous = snapshot();
+      const previousCourseId = selected.courseId;
+      const nextCourseName = normalizeCourseName(elements.courseInput.value);
+      const nextUnits = normalizeUnits(elements.unitsInput.value);
+      const matchingCourse = classes.find((item) => {
+        return (
+          item.courseId !== previousCourseId &&
+          courseNameKey(item.course) === courseNameKey(nextCourseName)
+        );
+      });
+      const nextCourseId = matchingCourse
+        ? matchingCourse.courseId
+        : previousCourseId;
+
+      classes.forEach((item) => {
+        if (item.courseId === previousCourseId) {
+          item.courseId = nextCourseId;
+        }
+
+        if (item.courseId === nextCourseId) {
+          item.course = nextCourseName;
+          item.units = nextUnits;
+        }
+      });
+
       selected.section = elements.sectionInput.value.trim() || "LECTURE";
       selected.room = elements.roomInput.value.trim() || "TBD";
       selected.day = clamp(
@@ -1927,7 +2132,8 @@
 
       announce(
         `${selected.course} updated to ${DAYS[selected.day]}, ` +
-        `${formatTimeRange(selected.start, selected.end)}.`
+        `${formatTimeRange(selected.start, selected.end)}, ` +
+        `${formatUnits(selected.units)} units.`
       );
     }
 
@@ -1994,7 +2200,9 @@
 
       const item = {
         id: makeId(),
+        courseId: makeUniqueCourseId("NEW COURSE"),
         course: "NEW COURSE",
+        units: DEFAULT_UNITS,
         section: "LECTURE",
         room: "TBD",
         day: slot.day,
@@ -2082,7 +2290,7 @@
 
     function resetSchedule() {
       const confirmed = window.confirm(
-        "Reset the schedule to its original classes, times, rooms, and colors?"
+        "Reset the schedule to its original classes, times, rooms, units, and colors?"
       );
 
       if (!confirmed) {
@@ -2091,7 +2299,7 @@
 
       const previous = snapshot();
 
-      classes = clone(INITIAL_CLASSES);
+      classes = sanitizeClasses(INITIAL_CLASSES);
       selectedId = null;
 
       recordPreviousSnapshot(previous);
@@ -2338,6 +2546,7 @@
 
     [
       elements.courseInput,
+      elements.unitsInput,
       elements.sectionInput,
       elements.roomInput,
       elements.dayInput,
@@ -2346,6 +2555,10 @@
       elements.colorInput
     ].forEach((input) => {
       input.addEventListener("change", applyEditorChanges);
+    });
+
+    elements.unitsInput.addEventListener("input", () => {
+      elements.unitsInput.setCustomValidity("");
     });
 
     elements.addButton.addEventListener("click", addClass);
